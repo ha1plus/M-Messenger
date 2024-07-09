@@ -21,12 +21,16 @@ export const useAuthStore = defineStore({
       const tokenFromCookie = this.getTokenFromCookie();
       if (tokenFromCookie) {
         this.setToken(tokenFromCookie);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
         this.fetchUserData(); // Example: Fetch user data after setting token
       }
     },
     setToken(token: string | null) {
       this.token = token;
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } else {
+        delete axios.defaults.headers.common['Authorization'];
+      }
     },
     setUser(user: { _id: string; name: string; email: string }) {
       this.user = user;

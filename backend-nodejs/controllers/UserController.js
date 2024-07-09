@@ -23,22 +23,12 @@ class UserController {
     }
 
     async index(req, res) {
-        try {
-            const keyword = req.query.search
-                ? {
-                    name: {
-                        $regex: req.query.search,
-                        $options: 'i'
-                    }
-                }
-                : {};
-
-            const data = await UserModel.find({ keyword }).find({
-                _id: { $ne: req.user._id }
-            });
-            res.json(data);
-        } catch (error) {
-            res.status(500).json(error)
+        const currentUser = req.user;
+        const users = await UserModel.find({ _id: { $ne: currentUser._id } });
+        if (users) {
+            return res.status(200).json(users);
+        } else {
+            return res.status(400).json({ message: 'Invalid user data' });
         }
     }
 

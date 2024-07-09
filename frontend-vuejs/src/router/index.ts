@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import Register from '../views/Register.vue'
 import Login from '../views/Login.vue'
+import Conversation from '../components/Conversation.vue'
 import { useAuthStore } from '../stores/auth' // Adjust path as needed
 
 const router = createRouter({
@@ -9,7 +10,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/home' // Redirect '/' to '/home'
+      redirect: '/home', // Redirect '/' to '/home'
+    },
+    {
+      path: '/conversation/:id',
+      name: 'conversation',
+      component: Conversation,
+      meta: { requiresAuth: true } // Requires authentication
     },
     {
       path: '/home',

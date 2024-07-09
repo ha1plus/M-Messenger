@@ -1,11 +1,13 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth'
-import { getCurrentInstance, ref, onMounted } from 'vue'
+import { getCurrentInstance, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import router from '../router/index'
 
 const store = useAuthStore()
 const { appContext } = getCurrentInstance()
 const { $axios } = appContext.config.globalProperties
+const route = useRoute()
 
 const isDropdownOpen = ref(false)
 
@@ -14,8 +16,15 @@ const toggleDropdown = () => {
 }
 
 onMounted(() => {
-  fetchData()
+    fetchData()
 })
+
+watch(
+  () => route.params,
+  () => {
+    fetchData()
+  }
+)
 
 const fetchData = () => {
   $axios
@@ -43,15 +52,15 @@ const logout = () => {
 <template>
   <nav class="bg-gray border-gray-200 dark:bg-gray-900">
     <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-      <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
+      <RouterLink to="/home" class="flex items-center space-x-3 rtl:space-x-reverse">
         <span class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
           >M Messenger</span
         >
-      </a>
+      </RouterLink>
       <div class="flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
         <button
           type="button"
-          class="flex text-sm bg-gray-800 rounded-full md:me-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+          class="flex text-sm bg-black rounded-full md:me-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
           @click="toggleDropdown"
         >
           <span class="sr-only">Open user menu</span>
