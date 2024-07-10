@@ -1,11 +1,17 @@
 <script setup>
-import { getCurrentInstance, defineProps, ref } from 'vue'
+import { getCurrentInstance, defineProps, ref, onMounted, onUnmounted, watch } from 'vue'
 import NewMessageInput from './NewMessageInput.vue'
+import { io } from 'socket.io-client'
+
+const socket = io('http://localhost:3000/')
 
 const props = defineProps({
   chatId: {
     type: Number,
     required: true
+  },
+  modelValue: {
+    type: Object
   }
 })
 
@@ -14,6 +20,8 @@ const messageSending = ref(false)
 const { appContext } = getCurrentInstance()
 const { $axios } = appContext.config.globalProperties
 
+const emit = defineEmits(['update:modelValue'])
+
 const onSendClick = () => {
   if (newMessage.value.trim() === '') {
     console.log('Please provide a message or upload attachments')
@@ -21,24 +29,46 @@ const onSendClick = () => {
   }
 
   messageSending.value = true
-  console.log('Sending message:', newMessage.value)
-  console.log('chat id:', props.chatId)
-
   $axios
     .post(`/message`, {
       content: newMessage.value,
       chatId: props.chatId
     })
     .then((response) => {
-      console.log('Message sent successfully:', response.data)
-      newMessage.value = '' // Clear input after successful submission
+      const newMessageEmit = {
+        _id: response.data._id,
+        content: response.data.content,
+        sender: response.data?.sender._id,
+        receiver: response.data?.receiver._id,
+        chatId: props.chatId
+      }
+      newMessage.value = ''
       messageSending.value = false
+      socket.emit('new message', newMessageEmit)
     })
     .catch((error) => {
-      console.error('Error sending message:', error.message)
+      console.error('Error sending message:', error)
       messageSending.value = false
     })
 }
+
+watch(
+  () => props.chatId,
+  (newValue) => {
+    socket.emit('join chat', newValue)
+  }
+)
+
+onMounted(() => {
+  socket.on('new message', (receivedMessage) => {
+    console.log('New message received:', receivedMessage)
+    emit('update:modelValue', receivedMessage)
+  })
+})
+
+onUnmounted(() => {
+  socket.off('new message') // Clean up the event listener when the component is unmounted
+})
 </script>
 
 <template>

@@ -1,9 +1,10 @@
 <script setup>
-import { getCurrentInstance, ref, onMounted, onUpdated, watch } from 'vue'
+import { getCurrentInstance, ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ConversationHeader from './ConversationHeader.vue'
 import MessageInput from './MessageInput.vue'
 import { useAuthStore } from '@/stores/auth'
+import { io } from 'socket.io-client'
 
 const route = useRoute()
 const store = useAuthStore()
@@ -11,15 +12,22 @@ const { appContext } = getCurrentInstance()
 const { $axios } = appContext.config.globalProperties
 const receiver = ref(null)
 const chatId = ref(0)
-const lastestMessage = ref(null)
+const messageEmit = ref('')
+const messages = ref([])
+
+const socket = io('http://localhost:3000/')
 
 const fetchAndAccessChats = async () => {
   try {
     const response = await $axios.get(`/conversation/${route.params.id}`)
     const users = response.data.users
-    lastestMessage.value = response.data.lastestMessage
+    messages.value = [response.data.lastestMessage]
     receiver.value = users.find((user) => user._id !== store?.user._id)
+    console.log(receiver.value)
     chatId.value = response.data._id
+
+    // Join the chat room
+    socket.emit('join chat', chatId.value)
   } catch (error) {
     console.error('Error fetching conversation:', error)
   }
@@ -27,6 +35,12 @@ const fetchAndAccessChats = async () => {
 
 onMounted(() => {
   fetchAndAccessChats()
+
+  // Set up socket listener for new messages
+  socket.on('new message', (message) => {
+    // console.log('New message received:', message)
+    messages.value.push(message) // Append new message to the messages array
+  })
 })
 
 watch(
@@ -35,6 +49,11 @@ watch(
     fetchAndAccessChats()
   }
 )
+
+// Clean up socket listener on unmount
+onUnmounted(() => {
+  socket.off('new message')
+})
 </script>
 
 <template>
@@ -42,15 +61,17 @@ watch(
     <div class="flex-grow overflow-auto">
       <ConversationHeader :receiver="receiver" />
       <div class="px-3">
-        <div v-if="store?.user._id != lastestMessage?.receiver">
-          <div class="chat chat-end">
-            <div class="chat-bubble">{{ lastestMessage?.content }}</div>
-          </div>
-        </div>
-        <div v-else>
-          <div v-if="lastestMessage?.content">
-            <div class="chat chat-start">
-              <div class="chat-bubble">{{ lastestMessage?.content }}</div>
+        <div v-for="message in messages" :key="message?._id">
+          <div v-if="message?.content !== undefined && message?.content !== ''">
+            <div v-if="receiver?._id != message?.sender">
+              <div class="chat chat-end">
+                <div class="chat-bubble">{{ message?.content }}</div>
+              </div>
+            </div>
+            <div v-else>
+              <div class="chat chat-start">
+                <div class="chat-bubble">{{ message?.content }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -58,7 +79,7 @@ watch(
     </div>
 
     <div class="input-container">
-      <MessageInput :chatId="chatId" />
+      <MessageInput :chatId="chatId" v-model="messageEmit" />
     </div>
   </div>
 </template>
